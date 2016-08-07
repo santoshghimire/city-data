@@ -11,7 +11,7 @@ json_path  = "data/"
 
 class CitydataPipeline(object):
     def process_item(self, item, spider):
-        self.file = codecs.open('../../{}.json'.format(item['stats']['zip']), 'wb',
+        self.file = codecs.open('../{}.json'.format(item['stats']['zip']), 'wb',
                                 encoding='utf-8')
 
 
