@@ -75,19 +75,12 @@ class CitydataSpider(scrapy.Spider):
             "zip": code_group.group(1),
             "cities": county_cities[:-1],
             "county": county_cities[-1],
-            "stats": {
-                "population": {
-                    "2013": 0,
-                    "2010": 0,
-                },
-                "houses_and_condos": 0
-            },
             'races': races_dict,
             'neighborhoods': neighborhoots_dict,
         }
 
         item = CitydataItem()
-        item['ZipCode'] = zip_code_dict
+        item['stats'] = zip_code_dict
         request.meta['main_url'] = response.url
 
         request.meta['item'] = item
@@ -114,7 +107,7 @@ class CitydataSpider(scrapy.Spider):
             real_states_dict_list.append(real_states_dict)
         item = response.meta['item']
 
-        item['ZipCode']['real_etates'] = {
+        item['stats']['real_etates'] = {
             'city': city_name,
             'home_sales': real_states_dict_list
         }
@@ -138,7 +131,7 @@ class CitydataSpider(scrapy.Spider):
         house_type = [x for x in house_type_elem if x.strip()]
         mean_house_prices_dict = dict(zip(house_type,house_price))
 
-        item['ZipCode']['mean_house_price'] = mean_house_prices_dict
+        item['stats']['mean_house_price'] = mean_house_prices_dict
 
         """ Zip code 19707 household income distribution in 2013"""
         household_income_distribution_list = main_body_elem.xpath(".//ul[@class='list-group col-md-4 col-sm-6 col-xs-12'][1]/li/text()").extract()
@@ -146,7 +139,7 @@ class CitydataSpider(scrapy.Spider):
 
         household_income_distribution_count_list = main_body_elem.xpath(".//ul[@class='list-group col-md-4 col-sm-6 col-xs-12'][1]/li/span/text()").extract()
         household_income_distribution_count_list=[x for x in household_income_distribution_count_list if x.strip()]
-        item['ZipCode']['household_income_distribution'] = dict(zip(household_income_distribution_list,household_income_distribution_count_list))
+        item['stats']['household_income_distribution'] = dict(zip(household_income_distribution_list,household_income_distribution_count_list))
 
 
         """ Estimate of home value of owner-occupied houses/condos in 2013 in zip code 19707"""
@@ -154,7 +147,7 @@ class CitydataSpider(scrapy.Spider):
         house_values_distribution_list = [x for x in house_values_distribution_list if x.strip()]
         house_values_distribution_count_list = main_body_elem.xpath(".//ul[@class='list-group col-md-4 col-sm-6 col-xs-12'][2]/li/span/text()").extract()
         house_values_distribution_count_list = [x for x in house_values_distribution_count_list if x.strip()]
-        item['ZipCode']['house_values_of_owner_occupied'] = dict(zip(house_values_distribution_list, house_values_distribution_count_list))
+        item['stats']['house_values_of_owner_occupied'] = dict(zip(house_values_distribution_list, house_values_distribution_count_list))
 
 
         """ Rent paid by renters in 2013 in zip code 19707"""
@@ -164,7 +157,7 @@ class CitydataSpider(scrapy.Spider):
         rent_paid_distribution_count_list = main_body_elem.xpath(
             ".//ul[@class='list-group col-md-4 col-sm-6 col-xs-12'][3]/li/span/text()").extract()
         rent_paid_distribution_count_list = [x for x in rent_paid_distribution_count_list if x.strip()]
-        item['ZipCode']['rent_paid_by_renters'] = dict(
+        item['stats']['rent_paid_by_renters'] = dict(
             zip(rent_paid_distribution_list, rent_paid_distribution_count_list))
 
         """Means of transportation to work in zip code 19707"""
@@ -174,7 +167,7 @@ class CitydataSpider(scrapy.Spider):
                                                                "li/span[@class='badge']/text()").extract()
 
         transportation_dict = dict(zip(transportation_type_list,transportation_type_number_list))
-        item['ZipCode']['transportation'] = transportation_dict
+        item['stats']['transportation'] = transportation_dict
 
 
         """Travel time to work (commute) in zip code 19707"""
@@ -186,7 +179,7 @@ class CitydataSpider(scrapy.Spider):
                                                                "li/span[@class='badge']/text()").extract()
 
         travel_time_to_work_dict = dict(zip(transportation_type_work_count_list,travel_time_to_work_list))
-        item['ZipCode']['travel_time_to_work'] = travel_time_to_work_dict
+        item['stats']['travel_time_to_work'] = travel_time_to_work_dict
 
         """ Most common Place of birth for the foreign born residents"""
         foreign_born_elem = main_body_elem.xpath(".//div[@class='col-md-6']/div[@class='gBorder']/ul")[0]
@@ -196,7 +189,7 @@ class CitydataSpider(scrapy.Spider):
         country_percent_list = foreign_born_elem.xpath("li/span/text()").extract()
         country_percent_list = [percent for percent in country_percent_list if percent.strip()]
 
-        item['ZipCode']['foreign_born_residents'] = dict(zip(country_list, country_percent_list))
+        item['stats']['foreign_born_residents'] = dict(zip(country_list, country_percent_list))
 
 
         """ Most Common First Ancestries reported in 19707"""
@@ -208,7 +201,7 @@ class CitydataSpider(scrapy.Spider):
         ancestor_percent_list = first_ancestries_elem.xpath("li/span/text()").extract()
         ancestor_percent_list = [ancestor for ancestor in ancestor_percent_list if ancestor.strip()]
 
-        item['ZipCode']['first_ancestries'] = dict(zip(ancestor_percent_list,ancestor_list))
+        item['stats']['first_ancestries'] = dict(zip(ancestor_percent_list,ancestor_list))
 
 
         """ Year of entry of the foreign-born population"""
@@ -220,7 +213,7 @@ class CitydataSpider(scrapy.Spider):
         year_popn_list = year_of_entry_of_foreign_populaton_elem.xpath("li/span/text()").extract()
         year_popn_list = [popn for popn in year_popn_list if popn.strip()]
 
-        item['ZipCode']['entry_of_foreign_born_population'] = dict(zip(entry_year_list,year_popn_list))
+        item['stats']['entry_of_foreign_born_population'] = dict(zip(entry_year_list,year_popn_list))
 
 
         """Major facilities with environmental interests located in this zip code:"""
@@ -244,7 +237,7 @@ class CitydataSpider(scrapy.Spider):
         'other_facilities':other_facilities_list
         }
 
-        item['ZipCode']['facilities'] =facilities_dict
+        item['stats']['facilities'] =facilities_dict
 
 
         """" Housing Units in Structures """
@@ -254,7 +247,7 @@ class CitydataSpider(scrapy.Spider):
         structure_type_unit_list = main_body_elem.xpath(".//ul[@style='margin-top: 0; margin-bottom: 0'][4]/li/text()").extract()
         structure_type_unit_list=[x for x in structure_type_unit_list if x.strip()]
 
-        item['ZipCode']['housing_units_in_structures'] =dict(zip(structure_type_list,structure_type_unit_list))
+        item['stats']['housing_units_in_structures'] =dict(zip(structure_type_list,structure_type_unit_list))
 
 
         """Estimated median house (or condo) value in 2013 for"""
@@ -264,7 +257,7 @@ class CitydataSpider(scrapy.Spider):
         median_value_list = main_body_elem.xpath(".//ul[@style='margin-top: 0; margin-bottom: 0'][3]/li/text()").extract()
         median_value_list=[x for x in median_value_list if x.strip()]
 
-        item['ZipCode']['median_house_value'] =dict(zip(house_holder_type_list,median_value_list))
+        item['stats']['median_house_value'] =dict(zip(house_holder_type_list,median_value_list))
 
         """For population 25 years and over in 19707"""
         popn_25_years_and_above_type =main_body_elem.xpath(".//ul[@style='margin-top: 0; margin-bottom: 0'][1]/li/b/text()").extract()
@@ -273,7 +266,7 @@ class CitydataSpider(scrapy.Spider):
         popn_25_years_and_above_type_percent =main_body_elem.xpath(".//ul[@style='margin-top: 0; margin-bottom: 0'][1]/li/text()").extract()
         popn_25_years_and_above_type_percent=[x for x in popn_25_years_and_above_type_percent if x.strip()]
 
-        item['ZipCode']['population_25_years_and_above'] =dict(zip(popn_25_years_and_above_type,popn_25_years_and_above_type_percent))
+        item['stats']['population_25_years_and_above'] =dict(zip(popn_25_years_and_above_type,popn_25_years_and_above_type_percent))
 
         """For population 15 years and over in 19707"""
         popn_15_years_and_above_type =main_body_elem.xpath(".//ul[@style='margin-top: 0; margin-bottom: 0'][2]/li/b/text()").extract()
@@ -282,7 +275,7 @@ class CitydataSpider(scrapy.Spider):
         popn_15_years_and_above_type_percent =main_body_elem.xpath(".//ul[@style='margin-top: 0; margin-bottom: 0'][2]/li/text()").extract()
         popn_15_years_and_above_type_percent=[x for x in popn_15_years_and_above_type_percent if x.strip()]
 
-        item['ZipCode']['population_15_years_and_above'] =dict(zip(popn_15_years_and_above_type,popn_15_years_and_above_type_percent))
+        item['stats']['population_15_years_and_above'] =dict(zip(popn_15_years_and_above_type,popn_15_years_and_above_type_percent))
 
         """ Bedrooms in house and  Appartments """
         bedrooms_elem = main_body_elem.xpath(".//div[@class='hssData']")[0]
@@ -310,7 +303,7 @@ class CitydataSpider(scrapy.Spider):
 
         bedrooms_in_renter_house_dict = dict(zip(bedrooms_type_in_renter_house_list, bedrooms_type_count_in_renter_house_list))
 
-        item['ZipCode']['bedrooms_in_houses_and_apartments'] ={
+        item['stats']['bedrooms_in_houses_and_apartments'] ={
             'owner_occupied_houses' : bedrooms_in_ownner_house_dict,
             'renter_occupied_apartments' : bedrooms_in_renter_house_dict,
         }
@@ -342,7 +335,7 @@ class CitydataSpider(scrapy.Spider):
 
         vehicles_in_renter_house_dict = dict(zip(vehicles_type_in_renter_house_list, vehicles_type_count_in_renter_house_list))
 
-        item['ZipCode']['vehicles_in_houses_and_apartments'] ={
+        item['stats']['vehicles_in_houses_and_apartments'] ={
             'owner_occupied_houses' : vehicles_in_ownner_house_dict,
             'renter_occupied_apartments' : vehicles_in_renter_house_dict,
         }
@@ -365,7 +358,7 @@ class CitydataSpider(scrapy.Spider):
     def parse_zip_code_map(self,response):
         item = response.meta['item']
 
-        zip = item['ZipCode']['zip']
+        zip = item['stats']['zip']
 
         zip_code_map_elem = response.xpath("//div[@id='{}']".format(zip))
 

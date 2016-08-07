@@ -10,4 +10,4 @@ import scrapy
 
 class CitydataItem(scrapy.Item):
     # define the fields for your item here like:
-    ZipCode = scrapy.Field()
+    stats = scrapy.Field()
