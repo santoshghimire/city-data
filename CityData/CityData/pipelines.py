@@ -19,6 +19,8 @@ class CitydataPipeline(object):
             ('zip', item['stats']['zip']),
             ('cities', item['stats']['cities']),
             ('county',item['stats']['county']),
+            ('demographics',item['stats']['demographics']),
+            ('local_businesses',item['stats']['local_businesses']),
             ('population_25_years_and_above', item['stats']['population_25_years_and_above']),
             ('population_15_years_and_above', item['stats']['population_15_years_and_above']),
             ('real_etates', item['stats']['real_etates']),

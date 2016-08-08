@@ -3,7 +3,7 @@ import scrapy
 from scrapy.shell import inspect_response
 from CityData.items import CitydataItem
 import re
-
+from scrapy import Selector
 
 class CitydataSpider(scrapy.Spider):
     name = "citydata"
@@ -56,11 +56,31 @@ class CitydataSpider(scrapy.Spider):
         # county_cities = re.sub(r'\([^)]*\)','',county_cities_elem)
         county_cities = main_body_elem.xpath(".//div[@class='alert alert-success']/a/text()").extract()
         code_group = re.search('\/zips\/(\d+)\.html', response.url)
+        zip_code = ""
         if code_group:
             try:
                 zip_code = int(code_group.group(1))
             except:
                 zip_code = code_group.group(1)
+
+        print("***********************")
+        # zip_code_map_elem = response.xpath("//div[@class='']").extract_first()
+        sel = Selector(text=main_body_elem.extract())
+        data = sel.xpath("string()").extract_first()
+        data = data.split("\r\n")
+        print(data)
+        print("***********************")
+
+        """ Profiles of Local Business"""
+        local_business_elem = main_body_elem.xpath(".//div[@id='prbox']/table")
+        local_business_name_list= local_business_elem.xpath(".//a/text()").extract()
+        local_business_name_list= [x.strip() for x in local_business_name_list if x]
+
+        local_business_link_list = local_business_elem.xpath(".//a/@href").extract()
+        local_business_link_list= [response.urljoin(x.strip()) for x in local_business_link_list if x]
+        local_business_dict_list = dict(zip(local_business_name_list,local_business_link_list))
+
+
 
         """ Races """
         races_elem = main_body_elem.xpath(".//div[@class='row']/div[@class='col-md-8']/ul[@class='list-group']/li")[-1]
@@ -90,6 +110,7 @@ class CitydataSpider(scrapy.Spider):
             "zip": zip_code,
             "cities": county_cities[:-1],
             "county": county_cities[-1],
+            'local_businesses' : local_business_dict_list,
             'races': races_dict,
             'neighborhoods': neighborhoods_dict,
         }
@@ -394,21 +415,132 @@ class CitydataSpider(scrapy.Spider):
             'renter_occupied_apartments': vehicles_in_renter_house_dict,
         }
 
-
         zip_code_map = response.xpath("//a[contains(text(),' Zip Code Map')]/@href").extract_first()
 
-        # request = scrapy.Request(response.urljoin(zip_code_map),self.parse_zip_code_map)
+        request = scrapy.Request(response.urljoin(zip_code_map), self.parse_zip_code_map)
 
-        # request.meta['item'] = item
-        return item
-        # return  request
+        request.meta['item'] = item
+        yield request
         # inspect_response(response,self)
 
     def parse_zip_code_map(self, response):
+
         item = response.meta['item']
 
-        zip = item['stats']['zip']
+        zip_code = item['stats']['zip']
 
-        zip_code_map_elem = response.xpath("//div[@id='{}']".format(zip))
+        zip_code_map_elem = response.xpath("//div[@id='{}']".format(zip_code)).extract_first()
+        sel = Selector(text=zip_code_map_elem)
+        data = sel.xpath("string()").extract_first()
+        data = data.split("\r\n")
+        """population """
+        population_data = [x.strip() for x in data if "zip code population in " in x.lower()]
+        population_year_list = [
+            re.search(r'\d\d\d\d', x.split(":")[0]).group() if ":" in x else x for x in population_data]
+
+        population_count_list = [
+            re.search(r'[\d,.]+', x.split(":")[1]).group() if ":" in x else x for x in population_data]
+
+        population_count_list = [int(re.sub(r'[,]+', '', x.strip())) for x in population_count_list if x.strip()]
+
+        population_data_dict = dict(zip(population_year_list,population_count_list))
+        print(population_data_dict)
+
+        """"   Area """
+        area = [x.strip() for x in data if "area" in x.lower()]
+        area_type = [x.split(":")[0].strip() if ":" in x else "" for x in area]
+        area_measurement = [x.split(":")[1].strip() if ":" in x else "" for x in area]
+        area_dict = dict(zip(area_type, area_measurement))
+        print(area_dict)
+
+        """ Population Density """
+
+        population_density = [x.split(":")[1] for x in data if 'population density' in x.lower()]
+
+        """ Median Real Estate property taxes"""
+
+        with_mortgages = 'median real estate property taxes paid for housing units with mortgages'
+        without_mortgage = 'median real estate property taxes paid for housing units with no mortgage'
+
+        """ With Mortgages"""
+        median_property_taxes_with_mortgages = [x.strip() for x in data if with_mortgages.lower() in x.lower()]
+
+        taxes_with_mortgages_year = [re.search(r'\d\d\d\d', x.split(":")[0]).group() if ":" in x else x for x in
+                                     median_property_taxes_with_mortgages]
+
+        taxes_with_mortgages_amount = [re.search(r'\$[\d,.]+', x.split(":")[1]).group() if ":" in x else x for x in
+                                       median_property_taxes_with_mortgages]
+
+        taxes_with_mortgages_amount = [float(re.sub(r'[\$,]+', "", x.strip())) for x in taxes_with_mortgages_amount if x]
+
+        taxes_with_mortgages_percent = [re.search(r'\(([^)]*)\)', x).group(1) if ":" in x else x for x in
+                                        median_property_taxes_with_mortgages]
+        taxes_with_mortgages_percent = [
+            float(x.strip("%")) / 100 if "%" in x else x for x in taxes_with_mortgages_percent]
+
+        taxes_with_mortgages_dict = []
+        for x in range(len(taxes_with_mortgages_percent)):
+            taxes_dict = {}
+            taxes_dict['year'] = taxes_with_mortgages_year[x]
+            taxes_dict['amount'] = taxes_with_mortgages_amount[x]
+            taxes_dict['percent'] = taxes_with_mortgages_percent[x]
+            taxes_with_mortgages_dict.append(taxes_dict)
+
+        """ Without Mortgages"""
+
+        median_property_taxes_without_mortgages = [x.strip() for x in data if without_mortgage.lower() in x.lower()]
+
+        taxes_without_mortgages_year = [re.search(r'\d\d\d\d', x.split(":")[0]).group() if ":" in x else x for x in
+                                        median_property_taxes_without_mortgages]
+
+        taxes_without_mortgages_amount = [re.search(r'\$[\d,.]+', x.split(":")[1]).group() if ":" in x else x for x in
+                                          median_property_taxes_without_mortgages]
+
+        taxes_without_mortgages_amount = [
+            float(re.sub(r'[\$,]+', "", x.strip())) for x in taxes_without_mortgages_amount if x]
+
+        taxes_without_mortgages_percent = [re.search(r'\(([^)]*)\)', x).group(1) if ":" in x else x for x in
+                                           median_property_taxes_without_mortgages]
+
+        taxes_without_mortgages_percent = [
+            float(x.strip("%")) / 100 if "%" in x else x for x in taxes_without_mortgages_percent]
+
+        taxes_without_mortgages_dict = []
+        for x in range(len(taxes_without_mortgages_percent)):
+            taxes_dict = {}
+            taxes_dict['year'] = taxes_without_mortgages_year[x]
+            taxes_dict['amount'] = taxes_without_mortgages_amount[x]
+            taxes_dict['percent'] = taxes_without_mortgages_percent[x]
+            taxes_without_mortgages_dict.append(taxes_dict)
+
+        median_real_estate_taxes = {
+            'with mortgages': taxes_with_mortgages_dict,
+            'with no mortgages': taxes_without_mortgages_dict
+        }
+
+        """ Remaining """
+        median_monthly_owner_costs_for_units = [x.strip() for x in data if 'median monthly owner costs' in x.lower()]
+
+        estimated_median_household_income = [x.strip() for x in data if 'estimated median' in x.lower()]
+        median_gross_rent = [x.strip() for x in data if 'median gross rent' in x.lower()]
+        print(median_gross_rent)
+        unemployment = [x.strip() for x in data if 'unemployment' in x.lower()]
+        print(unemployment)
+        print ('******************')
+        print(median_monthly_owner_costs_for_units)
+        print(estimated_median_household_income)
+        print(median_gross_rent)
+        print(unemployment)
+        print('******************')
+
+        item['stats']['demographics'] = {
+            'population': population_data_dict,
+            'area': area_dict,
+            'population_density': population_density[0],
+            'median_real_estate_property_taxes_paid_for_housing': median_real_estate_taxes,
+
+        }
 
         # inspect_response(response, self)
+
+        yield item
